@@ -1,0 +1,55 @@
+{
+    "name": "api",
+    "version": "0.0.1",
+    "private": true,
+    "scripts": {
+        "dev": "nest start --watch",
+        "build": "nest build",
+        "postinstall": "prisma generate",
+        "db:reset": "rm -f prisma/dev.db prisma/dev.db-journal prisma/dev.db-wal prisma/dev.db-shm && prisma generate && prisma migrate deploy && pnpm db:seed",
+        "db:seed": "tsx prisma/seed.ts",
+        "repro": "ts-node -T src/repro.ts",
+        "test": "jest",
+        "test:e2e": "jest --config test/jest-e2e.json --runInBand",
+        "check": "biome check .",
+        "typecheck": "tsc --noEmit"
+    },
+    "prisma": {
+        "seed": "tsx prisma/seed.ts"
+    },
+    "dependencies": {
+        "@apollo/server": "^5.0.0",
+        "@as-integrations/express5": "^1.1.2",
+        "@nestjs/apollo": "^13.4.0",
+        "@nestjs/common": "^11.2.0",
+        "@nestjs/core": "^11.2.0",
+        "@nestjs/event-emitter": "^3.1.0",
+        "@nestjs/graphql": "^13.4.0",
+        "@nestjs/platform-express": "^11.2.0",
+        "@prisma/client": "^6.19.0",
+        "class-validator": "^0.14.2",
+        "cookie-parser": "^1.4.7",
+        "graphql": "^16.11.0",
+        "nestjs-cls": "^6.2.0",
+        "reflect-metadata": "^0.2.2",
+        "rxjs": "^7.8.1"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^2.3.0",
+        "@nestjs/cli": "^11.0.0",
+        "@nestjs/schematics": "^11.0.0",
+        "@nestjs/testing": "^11.2.0",
+        "@types/cookie-parser": "^1.4.10",
+        "@types/express": "^5.0.0",
+        "@types/jest": "^30.0.0",
+        "@types/node": "^24.0.0",
+        "@types/supertest": "^6.0.2",
+        "jest": "^30.0.0",
+        "prisma": "^6.19.0",
+        "supertest": "^7.0.0",
+        "ts-jest": "^29.2.5",
+        "ts-node": "^10.9.2",
+        "tsx": "^4.19.2",
+        "typescript": "^5.7.0"
+    }
+}

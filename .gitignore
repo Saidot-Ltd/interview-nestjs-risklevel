@@ -1,0 +1,9 @@
+node_modules
+dist
+build
+.react-router
+*.db
+*.db-journal
+apps/api/src/schema.gql
+test-results
+playwright-report

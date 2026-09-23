@@ -1,0 +1,24 @@
+{
+    "name": "interview-risklevel",
+    "private": true,
+    "packageManager": "pnpm@11.1.2",
+    "engines": {
+        "node": ">=24"
+    },
+    "scripts": {
+        "dev": "pnpm --filter api dev",
+        "build": "pnpm --filter api build",
+        "db:reset": "pnpm --filter api db:reset",
+        "db:seed": "pnpm --filter api db:seed",
+        "repro": "pnpm --filter api repro",
+        "test": "pnpm --filter api test",
+        "test:e2e": "pnpm --filter api test:e2e",
+        "test:e2e:web": "pnpm --filter web test:e2e",
+        "check": "biome check .",
+        "check:fix": "biome check --write .",
+        "typecheck": "pnpm --filter api typecheck"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^2.3.0"
+    }
+}
