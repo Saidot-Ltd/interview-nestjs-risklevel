@@ -4,10 +4,10 @@
 
 ## What this is
 
-A miniature of one GraphQL mutation from a governance API: change the risk level of an AI system,
+A miniature of one write path from a governance API, served over GraphQL and REST: change the risk level of an AI system,
 write an audit row, notify the owner. Written two years ago. Untouched since.
 
-- API: NestJS 11, code-first GraphQL, Prisma on SQLite, `nestjs-cls`, event-emitter.
+- API: NestJS 11, code-first GraphQL plus REST controllers on the same services, Prisma on SQLite, `nestjs-cls`, event-emitter.
 - Web: one React Router v7 page with the risk-level dropdown.
 - Session: header `x-user-email`. Users: `alice@acme.test` (org 1, systems 1-6, system 6 soft-deleted), `bob@globex.test` (org 2, systems 7-11).
 - Rules the code is supposed to follow: `apps/api/AGENTS.md` (three of them).
@@ -15,7 +15,7 @@ write an audit row, notify the owner. Written two years ago. Untouched since.
 ## Commands
 
 ```
-pnpm dev          # api :4300/graphql + web :4373 (browser calls the API directly, cookie = session)
+pnpm dev          # api :4300 (/graphql + REST) + web :4373 (browser calls the API directly, cookie = session)
 pnpm repro        # runs the failing save, prints the three tables
 pnpm test         # unit (mocked)
 pnpm test:e2e     # real database
@@ -23,7 +23,23 @@ pnpm test:e2e:web # browser smoke, needs pnpm dev running
 pnpm check        # biome
 ```
 
-## SAID-INT-1: make `setSystemRiskLevel` atomic and tenant-safe
+## REST routes
+
+Each route calls the same service method as its GraphQL twin. Pick the transport you prefer; the bugs are the same on both.
+
+| GraphQL | REST |
+|---|---|
+| `me` | `GET /me` |
+| `governSystems(page, pageSize)` | `GET /systems?page=&pageSize=` |
+| `setSystemRiskLevel(systemId, riskLevel, organizationId, actorId)` | `PATCH /systems/:systemId/risk-level` with `{ riskLevel, organizationId, actorId }` |
+| `systemActivity(systemId)` | `GET /systems/:systemId/activity` |
+
+```
+curl -X PATCH -H 'x-user-email: alice@acme.test' -H 'content-type: application/json' \
+  -d '{"riskLevel":"High","organizationId":1,"actorId":1}' http://localhost:4300/systems/1/risk-level
+```
+
+## SAID-INT-1: make `setSystemRiskLevel` (`PATCH /systems/:systemId/risk-level`) atomic and tenant-safe
 
 **TL;DR:** one transaction owns every write, side effects after commit, tenant and actor from the session, one e2e that goes red before and green after.
 
@@ -31,7 +47,7 @@ Known, in `apps/api/src/govern-system/govern-system.service.ts`:
 
 1. System row updated outside the `$transaction`, audit row inside. Failed save = changed system, no audit row. `pnpm repro` shows it.
 2. Notification and event fire before commit.
-3. `organizationId` and `actorId` come from mutation arguments. Should be `CurrentContextService`.
+3. `organizationId` and `actorId` come from the caller (mutation arguments, REST body). Should be `CurrentContextService`.
 
 Together, ~30 min. You will not finish everything. Say what you skip and why. Leave the noise alone unless it blocks you.
 
@@ -42,13 +58,13 @@ Acceptance criteria are observable. How you get there is yours to defend.
 
 ### INT-2: bulk risk level for an organisation
 
-New mutation `setOrganisationRiskLevel(riskLevel)`: every non-deleted system in the caller's organisation moves to that level.
+New mutation `setOrganisationRiskLevel(riskLevel)` and route `PATCH /systems/risk-level` with `{ riskLevel }`: every non-deleted system in the caller's organisation moves to that level.
 
 Acceptance:
 - All systems change or none does. An e2e proves it: make the write for system 3 fail, assert every row is unchanged.
 - One audit row per changed system, each signed by the caller.
 - Each owner receives one notification for the batch, not one per system.
-- The per-system mutation from SAID-INT-1 keeps working and shares its code with the bulk path.
+- The per-system mutation and route from SAID-INT-1 keep working and share their code with the bulk path.
 
 Question for the conversation: where does responsibility for the transaction sit, and what does that mean for the per-system code you just fixed?
 
@@ -60,17 +76,17 @@ Acceptance:
 - Audit rows exist for every changed system and name a non-human actor consistently.
 - Running the script twice changes nothing the second time and writes no second audit row.
 - One test runs the script against the real database and asserts the two points above.
-- No mutation argument or environment variable lets a caller choose the actor.
+- No mutation argument, request field or environment variable lets a caller choose the actor.
 
 Question for the conversation: a request carries a user, a job does not. Where does identity come from in each case, and what must never be the source?
 
 ### INT-4: soft-deleted systems are invisible
 
-System 6 in organisation 1 is soft-deleted. The list hides it. The mutation still changes it.
+System 6 in organisation 1 is soft-deleted. The list hides it. The mutation and the route still change it.
 
 Acceptance:
-- `governSystems` never returns system 6.
-- `setSystemRiskLevel(6, ...)` returns a not-found error, writes no audit row, sends no notification.
+- `governSystems` and `GET /systems` never return system 6.
+- `setSystemRiskLevel(6, ...)` and `PATCH /systems/6/risk-level` return a not-found error (404 on REST), writes no audit row, sends no notification.
 - Two e2e tests against the real database, one per point.
 - No other system's behaviour changes.
 

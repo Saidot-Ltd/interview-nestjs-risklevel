@@ -1,11 +1,11 @@
 # apps/api
 
-NestJS 11, code-first GraphQL, Prisma on SQLite, `nestjs-cls` for request context.
+NestJS 11, code-first GraphQL plus REST controllers that call the same services, Prisma on SQLite, `nestjs-cls` for request context.
 
 ## The three rules
 
 1. **Tenant comes from the session, never from the caller.** Read `organizationId` from
-   `CurrentContextService`. An `organizationId` that arrives as a GraphQL argument or a method
+   `CurrentContextService`. An `organizationId` that arrives as a GraphQL argument, a REST param or body field, or a method
    parameter is caller-controlled and must never reach a `where` clause.
 2. **The audit row belongs in the same transaction as the write it describes, with a named actor.**
    `AuditLogService.persist(trx, before, after, meta)` takes the caller's transaction client as its
@@ -27,12 +27,13 @@ There is no auth in this fixture. `SessionMiddleware` reads the `x-user-email` h
 real session. Requests with no header have no context, and `CurrentContextService` throws for them.
 
     curl -H 'x-user-email: alice@acme.test' ... http://localhost:4300/graphql
+    curl -H 'x-user-email: alice@acme.test' http://localhost:4300/systems
 
 ## Commands
 
 | Command | What it does |
 |---|---|
-| `pnpm dev` | Nest in watch mode, GraphQL sandbox on `http://localhost:4300/graphql` |
+| `pnpm dev` | Nest in watch mode, GraphQL sandbox on `http://localhost:4300/graphql`, REST on `http://localhost:4300` |
 | `pnpm db:reset` | Drop `prisma/dev.db`, apply migrations, seed |
 | `pnpm db:seed` | Seed only |
 | `pnpm repro` | Reset, boot the app with a failing notification provider, print the three tables |
