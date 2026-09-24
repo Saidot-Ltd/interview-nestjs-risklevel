@@ -42,6 +42,12 @@ export class GovernSystemPage {
     pageSize: number;
 }
 
+export class SetRiskLevelBody {
+    riskLevel: string;
+    organizationId: number;
+    actorId?: number;
+}
+
 export interface RiskLevelChangedEvent {
     systemId: number;
     organizationId: number;
