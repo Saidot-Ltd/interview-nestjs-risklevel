@@ -55,6 +55,18 @@ describe('REST routes (e2e)', () => {
         expect(system.riskLevel).toBe('High');
     });
 
+    it('PATCH /systems/:id/risk-level rejects a body that fails the schema', async () => {
+        const response = await request(app.getHttpServer())
+            .patch('/systems/1/risk-level')
+            .set('x-user-email', 'alice@acme.test')
+            .send({ riskLevel: 'Low', organizationId: 'one' });
+
+        expect(response.status).toBe(400);
+
+        const system = await prisma.governSystem.findUnique({ where: { id: 1 } });
+        expect(system.riskLevel).toBe('High');
+    });
+
     it('GET /systems/:id/activity returns the audit trail', async () => {
         const response = await request(app.getHttpServer())
             .get('/systems/1/activity')
