@@ -1,6 +1,8 @@
 import { Args, Int, Query, Resolver } from '@nestjs/graphql';
+import { ZodValidationPipe } from 'nestjs-zod';
 import { CurrentContextService } from '../context/current-context.service';
 import { SystemActivity } from './audit-log.graphql.types';
+import { SystemIdSchema } from './system-activity.schemas';
 import { SystemActivityService } from './system-activity.service';
 
 @Resolver(() => SystemActivity)
@@ -11,7 +13,9 @@ export class AuditLogResolver {
     ) {}
 
     @Query(() => SystemActivity)
-    async systemActivity(@Args('systemId', { type: () => Int }) systemId: number): Promise<SystemActivity> {
+    async systemActivity(
+        @Args('systemId', { type: () => Int }, new ZodValidationPipe(SystemIdSchema)) systemId: number,
+    ): Promise<SystemActivity> {
         return this.systemActivityService.getSystemActivity(systemId, this.currentContext.organizationId);
     }
 }
