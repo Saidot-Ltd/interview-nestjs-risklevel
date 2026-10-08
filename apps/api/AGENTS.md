@@ -1,45 +1,42 @@
-# apps/api
+# API project notes
 
-NestJS 11, code-first GraphQL plus REST controllers that call the same services, Prisma on SQLite, `nestjs-cls` for request context.
+This fixture uses NestJS 11, code-first GraphQL, REST controllers, Prisma with SQLite,
+and `nestjs-cls` for request context.
 
-## The three rules
+## Working conventions
 
-1. **Tenant comes from the session, never from the caller.** Read `organizationId` from
-   `CurrentContextService`. An `organizationId` that arrives as a GraphQL argument, a REST param or body field, or a method
-   parameter is caller-controlled and must never reach a `where` clause.
-2. **The audit row belongs in the same transaction as the write it describes, with a named actor.**
-   `AuditLogService.persist(trx, before, after, meta)` takes the caller's transaction client as its
-   first argument. The actor is a person from the request context, not a parameter.
-3. **Side effects happen after commit.** Events and notifications describe work that has landed.
-   Nothing inside a `$transaction` callback may emit, notify or call the outside world, and a failed
-   side effect must not undo a committed write.
+- Read [INT-1](../../interview/INT-1.md) for requirements and scope.
+- Follow the existing project style.
 
-## Transactions
+## Fixture session
 
-`this.prisma` inside a `$transaction` callback is a different connection to `trx`. Its writes are
-not part of the transaction and do not roll back. Prisma interactive transactions do not nest: the
-outermost caller owns the transaction, everyone below takes `trx` as a parameter.
+There is no production authentication in this exercise. The app uses `x-user-email`
+to identify a seeded user and establish request context.
 
-## The fake session
+```sh
+curl -H 'x-user-email: alice@acme.test' http://localhost:4300/systems
+```
 
-There is no auth in this fixture. `SessionMiddleware` reads the `x-user-email` header, looks the
-`AppUser` up and puts `userId`, `userEmail` and `organizationId` into CLS. That stands in for the
-real session. Requests with no header have no context, and `CurrentContextService` throws for them.
+Missing session information is handled by the app’s existing context support.
+You do not need to implement a login or authentication system.
 
-    curl -H 'x-user-email: alice@acme.test' ... http://localhost:4300/graphql
-    curl -H 'x-user-email: alice@acme.test' http://localhost:4300/systems
+## Checks
 
-## Commands
+Run these from the repository root:
 
-| Command | What it does |
+| Command | Purpose |
 |---|---|
-| `pnpm dev` | Nest in watch mode, GraphQL sandbox on `http://localhost:4300/graphql`, REST on `http://localhost:4300` |
-| `pnpm db:reset` | Drop `prisma/dev.db`, apply migrations, seed |
-| `pnpm db:seed` | Seed only |
-| `pnpm repro` | Reset, boot the app with a failing notification provider, print the three tables |
-| `pnpm test` | Unit tests (Jest, mocked Prisma) |
-| `pnpm test:e2e` | e2e tests against a real `prisma/test.db` |
-| `pnpm check` | Biome format + lint |
-| `pnpm typecheck` | `tsc --noEmit` |
+| `pnpm test` | Unit tests |
+| `pnpm test:e2e` | API tests with a real test database |
+| `pnpm check` | Formatting and lint |
+| `pnpm typecheck` | API TypeScript check |
 
-`strictNullChecks` is off, as it is in the real codebase.
+`strictNullChecks` is disabled in this fixture.
+Setup and sample-data reset commands are documented in the root README.
+
+## AI-assisted work
+
+AI assistants may read this repository and assist with the current task.
+The same task scope and requirements apply to assisted and manual work.
+Keep tool interaction, edits, and verification visible on the shared screen.
+Candidate tool policy: the [root README](../../README.md).
